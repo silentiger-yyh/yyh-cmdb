@@ -28,8 +28,8 @@ public class CodeGenerator {
 
         // 2、全局配置
         GlobalConfig gc = new GlobalConfig();
-        String projectPath = System.getProperty("user.dir");
-        gc.setOutputDir("E:\\coding\\silentiger-cmdb-cloud\\generations");
+//        String projectPath = System.getProperty("user.dir");
+        gc.setOutputDir("E:\\coding\\silentiger-cmdb\\cmdb-cloud\\doc\\gens");
         gc.setAuthor("silentiger@yyh");
         gc.setOpen(false); //生成后是否打开资源管理器
         gc.setFileOverride(false); //重新生成时文件是否覆盖
@@ -51,7 +51,7 @@ public class CodeGenerator {
         // 4、包配置
         PackageConfig pc = new PackageConfig();
 //        pc.setModuleName("kafka"); //模块名
-        pc.setParent("org.silentiger");
+        pc.setParent("org.silentiger.cmdb");
         pc.setController("controller");
         pc.setEntity("entity");
         pc.setService("service");

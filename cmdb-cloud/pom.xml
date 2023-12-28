@@ -18,6 +18,7 @@
     <module>cmdb-common</module>
     <module>cmdb-auth</module>
     <module>cmdb-gateway</module>
+    <module>cmdb-system</module>
   </modules>
 
   <properties>
