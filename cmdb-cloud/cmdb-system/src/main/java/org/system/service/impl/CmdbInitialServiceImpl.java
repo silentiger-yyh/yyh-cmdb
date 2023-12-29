@@ -85,8 +85,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
         try {
             MongoCollection<Document> modelCollection = mongoTemplate.getCollection("model");
             Document modelDoc = Document.parse(new BaseDoc().toString())
-                    .append("groupCode", "模型分组")
-                    .append("parentCode", "父模型")
+                    .append("group", "模型分组")
+                    .append("parent", "父模型")
                     .append("remodels", "无向关联的模型");
             modelCollection.insertOne(modelDoc);
         } catch (Exception e) {

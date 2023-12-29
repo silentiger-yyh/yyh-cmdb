@@ -1,7 +1,7 @@
 package org.system.service;
 
-import org.bson.Document;
 import org.silentiger.api.CommonResult;
+import org.system.entity.Model;
 
 /**
  * IModelService接口
@@ -11,5 +11,7 @@ import org.silentiger.api.CommonResult;
  */
 
 public interface IModelService {
-    CommonResult<Object> saveModel(Document document);
+    CommonResult<Object> saveModel(Model document, Integer flag);
+
+    CommonResult<Object> getModelInfoById(String id);
 }
