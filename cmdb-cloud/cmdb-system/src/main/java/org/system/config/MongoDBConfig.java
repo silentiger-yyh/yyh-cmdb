@@ -1,9 +1,16 @@
 package org.system.config;
 
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.MongoTransactionManager;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 /**
  * MongoDBConfig类
  * Mongodb配置文件，与yml配置二选其一即可
@@ -16,7 +23,7 @@ import org.springframework.data.mongodb.MongoTransactionManager;
 public class MongoDBConfig {
 //    @Bean
 //    public MongoClient mongoClient() {
-//        ConnectionString connectionString = new ConnectionString("mongodb://yuyunhu:123456@mongo:27017/yyh-cmdb?connectTimeoutMS=2000");
+//        ConnectionString connectionString = new ConnectionString("mongodb://yuyunhu:123456@mongo:27017/silentiger-cmdb-log?connectTimeoutMS=2000");
 //        return MongoClients.create(
 //                MongoClientSettings.builder()
 //                        .applyConnectionString(connectionString)

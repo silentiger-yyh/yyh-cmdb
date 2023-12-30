@@ -7,7 +7,11 @@ import org.bson.types.ObjectId;
 import org.silentiger.api.CommonResult;
 import org.silentiger.constant.CmdbConstant;
 import org.silentiger.util.Pinyin4jUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -32,8 +36,9 @@ public class ModelServiceImpl implements IModelService {
 
     @Autowired
     private MongoTemplate mongoTemplate;
-
-
+    @Autowired
+    @Qualifier(value = "logger")
+    private Logger logger;
 
     @Override
     public CommonResult<Object> saveModel(Model model, Integer flag) {
@@ -55,9 +60,11 @@ public class ModelServiceImpl implements IModelService {
                     if (!models.isEmpty()) {
                         throw new Exception("编码重复");
                     }
+//                    mongoTemplate.getCollection(CmdbConstant.MODEL_COLLECTION_NAME).insertOne(document);
                     mongoTemplate.insert(document, CmdbConstant.MODEL_COLLECTION_NAME);
                 } catch (Exception e) {
-                    return CommonResult.failed("新增失败: " + e.getMessage());
+                    logger.error("新增失败: "+e.getMessage() + "(" + document.get("code") + ")");
+                    return CommonResult.failed("新增失败");
                 }
             } break;
             case 1: {  // 修改
@@ -72,10 +79,14 @@ public class ModelServiceImpl implements IModelService {
                 try {
                     mongoTemplate.updateFirst(query,updates, CmdbConstant.MODEL_COLLECTION_NAME);
                 } catch (Exception e) {
-                    return CommonResult.failed("修改失败: " + e.getMessage());
+                    logger.error("修改失败: " + e.getMessage() + "(" + document + ")");
+                    return CommonResult.failed("修改失败");
                 }
             }break;
+            default: break;
         }
+        String msg = flag == 0 ? "新增成功(" + document + ")" : "修改成功(" + document + ")";
+        logger.info(msg);
         return CommonResult.success("操作成功");
     }
 
@@ -90,4 +101,5 @@ public class ModelServiceImpl implements IModelService {
         }
         return CommonResult.success(document);
     }
+
 }

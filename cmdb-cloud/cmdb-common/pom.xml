@@ -31,7 +31,6 @@
             <artifactId>java-jwt</artifactId>
             <version>4.4.0</version>
         </dependency>
-
         <!--mybatis-plus 代码生成器-->
         <dependency>
             <groupId>com.baomidou</groupId>

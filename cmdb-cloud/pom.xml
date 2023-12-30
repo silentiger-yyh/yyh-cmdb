@@ -34,6 +34,8 @@
     <spring-security-oauth2.version>2.5.2.RELEASE</spring-security-oauth2.version>
     <spring-security-oauth2-autoconfigure.version>2.6.8</spring-security-oauth2-autoconfigure.version>
     <nimbus-jose-jwt.version>9.23</nimbus-jose-jwt.version>
+    <log4j-core.version>2.17.1</log4j-core.version>
+    <log4j-nosql.version>2.9.1</log4j-nosql.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
@@ -200,6 +202,16 @@
         <groupId>com.alibaba</groupId>
         <artifactId>fastjson</artifactId>
         <version>1.2.66</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+        <version>${log4j-core.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-nosql</artifactId>
+        <version>${log4j-nosql.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

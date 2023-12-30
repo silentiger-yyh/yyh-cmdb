@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.system.service.ICmdbInitialService;
 
+import java.util.function.Consumer;
+
 /**
  * CmdbInitialServiceImpl类
  * 初始化数据库Service实现类
@@ -80,7 +82,7 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
         // 先清除所有集合
         MongoDatabase db = mongoTemplate.getDb();
         MongoIterable<String> collectionNames = db.listCollectionNames();
-        collectionNames.forEach(collection -> mongoTemplate.getCollection(collection).drop());
+        collectionNames.forEach((Consumer<? super String>)  collection -> mongoTemplate.getCollection(collection).drop());
         // model
         try {
             MongoCollection<Document> modelCollection = mongoTemplate.getCollection("model");
@@ -195,7 +197,7 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
             throw new RuntimeException("data初始化异常, " + e.getMessage());
         }
         // 所有集合创建好之后，创建索引
-        collectionNames.forEach(collection -> {
+        collectionNames.forEach((Consumer<? super String>) collection -> {
             createInboxIndex(collection, "code", true);  // 唯一索引
             // 创建联合索引
             switch (collection) {

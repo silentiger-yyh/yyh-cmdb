@@ -44,10 +44,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Swagger2依赖 -->
@@ -58,6 +60,47 @@
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
+
+        <!--        <dependency>-->
+<!--            <groupId>org.springframework.boot</groupId>-->
+<!--            <artifactId>spring-boot-starter-data-mongodb</artifactId>-->
+<!--        </dependency>-->
+        <!-- https://mvnrepository.com/artifact/org.mongodb/mongo-java-driver -->
+        <!-- log4j存储到mongo需要用到mongo-java-driver，否则会报错NoClassDefFoundError: com/mongodb/MongoClient
+        但是这个包又和spring-boot-starter-data-mongodb冲突了，所以只能换一种方式引入依赖
+        mongo-java-driver和spring-data-mongodb
+         -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongo-java-driver</artifactId>
+            <version>3.12.11</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.springframework.data/spring-data-mongodb -->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-mongodb</artifactId>
+            <version>3.2.2</version>
+        </dependency>
+        <!-- 引入log4j2依赖 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-log4j2</artifactId>
+<!--            <version>3.2.0</version>-->
+        </dependency>
+        <!-- 必需，否则报错 Springboot 1.5.x 使用 2.7版本-->
+        <!--log4j-core-->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.9.1</version>
+        </dependency>
+        <!-- 必需，否则报错 Springboot 1.5.x 使用 2.7版本-->
+        <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-nosql -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-nosql</artifactId>
+            <version>2.9.0</version>
         </dependency>
     </dependencies>
 </project>
