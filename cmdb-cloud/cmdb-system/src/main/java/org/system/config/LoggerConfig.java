@@ -18,8 +18,13 @@ public class LoggerConfig {
 
 //    public final static Logger logger = LoggerFactory.getLogger("cmdb-system");
 
-    @Bean("logger")
-    public Logger logger() {
-        return LoggerFactory.getLogger("cmdb-system");
+    @Bean("logger-info")
+    public Logger loggerInfo() {
+        return LoggerFactory.getLogger("cmdb-system-info");
+    }
+    @Bean("logger-error")
+    public Logger loggerError() {
+        return LoggerFactory.getLogger("cmdb-system-error");
     }
 }
+

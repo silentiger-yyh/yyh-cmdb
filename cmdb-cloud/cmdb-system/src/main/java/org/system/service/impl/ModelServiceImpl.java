@@ -17,6 +17,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
+import org.system.config.LoggerUtil;
 import org.system.entity.Model;
 import org.system.service.IModelService;
 
@@ -37,8 +38,7 @@ public class ModelServiceImpl implements IModelService {
     @Autowired
     private MongoTemplate mongoTemplate;
     @Autowired
-    @Qualifier(value = "logger")
-    private Logger logger;
+    private LoggerUtil logger;
 
     @Override
     public CommonResult<Object> saveModel(Model model, Integer flag) {

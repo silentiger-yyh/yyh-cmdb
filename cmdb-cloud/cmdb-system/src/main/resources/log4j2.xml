@@ -15,12 +15,18 @@
 
     <appenders>
         <!-- 配置mongdb appender -->
-        <NoSql name="CMDBErrorAppender">
+        <NoSql name="CMDBSystemInfoAppender">
             <!--参数分别是：数据库名，集合名，服务器ip，端口。还可以指定其他参数或升级版本，详情请看：http://logging.apache.org/log4j/2.x/manual/appenders.html#NoSQLAppender-->
-<!--            <MongoDb databaseName="test" collectionName="log" server="192.168.83.141" port="27017"/>-->
-            <MongoDb databaseName="silentiger-cmdb-log" collectionName="error_log" server="192.168.83.141" port="27017"
+            <MongoDb databaseName="silentiger-cmdb-log" collectionName="cmdb_system_info_log" server="192.168.83.141" port="27017"
                      username = "yuyunhu" password = "123456"/>
-<!--            <ThresholdFilter level="WARN" onMatch="ACCEPT" onMismatch="DENY"/>-->
+            <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+        </NoSql>
+        <!-- 配置mongdb appender >=error级别的日志单独存放到另一个集合中（cmdb_system_error_log）-->
+        <NoSql name="CMDBSystemErrorAppender">
+            <!--参数分别是：数据库名，集合名，服务器ip，端口。还可以指定其他参数或升级版本，详情请看：http://logging.apache.org/log4j/2.x/manual/appenders.html#NoSQLAppender-->
+            <MongoDb databaseName="silentiger-cmdb-log" collectionName="cmdb_system_error_log" server="192.168.83.141" port="27017"
+                     username = "yuyunhu" password = "123456"/>
+            <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
         </NoSql>
         <console name="Console" target="SYSTEM_OUT">
             <!--输出日志的格式-->
@@ -93,14 +99,22 @@
         </Logger>
 
         <!-- 只把 cmdb-system（服务名） 的日志写进mongodb
-            ===待实现===
+            这个无法实现，只能根据日志的不同级别区分不同的集合
+            比如下面这两个，
+                所有>=info级别的都存放到cmdb_system_info_log集合中
+                所有>=error级别的都存放到cmdb_system_error_log集合中
+            此外，下面这两个name不能重复，否则会被覆盖，其中有一个不会生效
         -->
-        <Logger name="cmdb-system" level="info" additivity="false">
-            <AppenderRef ref="CMDBErrorAppender"/>
+        <Logger name="cmdb-system-info" level="info" additivity="false">
+            <AppenderRef ref="CMDBSystemInfoAppender"/>
+        </Logger>
+        <Logger name="cmdb-system-error" level="error" additivity="false">
+            <AppenderRef ref="CMDBSystemErrorAppender"/>
         </Logger>
 
         <root level="info">
-            <appender-ref ref="CMDBErrorAppender"/> <!--主要是配置输出在mongodb-->
+            <appender-ref ref="CMDBSystemInfoAppender"/> <!--主要是配置输出在mongodb-->
+            <appender-ref ref="CMDBSystemErrorAppender"/> <!--主要是配置输出在mongodb-->
             <appender-ref ref="Console"/>
 <!--            <appender-ref ref="Filelog"/>-->
 <!--            <appender-ref ref="RollingFileInfo"/>-->
