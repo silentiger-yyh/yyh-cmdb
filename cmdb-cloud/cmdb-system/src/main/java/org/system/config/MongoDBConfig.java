@@ -23,7 +23,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class MongoDBConfig {
 //    @Bean
 //    public MongoClient mongoClient() {
-//        ConnectionString connectionString = new ConnectionString("mongodb://yuyunhu:123456@mongo:27017/silentiger-cmdb-log?connectTimeoutMS=2000");
+//        ConnectionString connectionString = new ConnectionString("mongodb://yuyunhu:123456@mongo:27017/silentiger-cmdb?connectTimeoutMS=2000");
 //        return MongoClients.create(
 //                MongoClientSettings.builder()
 //                        .applyConnectionString(connectionString)
@@ -34,12 +34,13 @@ public class MongoDBConfig {
 //    }
 
     /**
-     * 开启事务支持
+     * 开启事务支持 这种不好使,懒得用,出了bug都不好找
+     * 还是用原生的方式吧, 不过得配置MongoClient
      * @param mongoDbFactory
      * @return
      */
-    @Bean
-    public MongoTransactionManager mongoTransactionManager(MongoDatabaseFactory mongoDbFactory) {
-        return new MongoTransactionManager(mongoDbFactory);
-    }
+//    @Bean
+//    public MongoTransactionManager mongoTransactionManager(MongoDatabaseFactory mongoDbFactory) {
+//        return new MongoTransactionManager(mongoDbFactory);
+//    }
 }

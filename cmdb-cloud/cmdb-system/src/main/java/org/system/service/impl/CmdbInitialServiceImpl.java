@@ -1,9 +1,8 @@
 package org.system.service.impl;
 
 import com.alibaba.fastjson.JSON;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.MongoIterable;
+import com.mongodb.client.*;
+import com.mongodb.client.model.IndexOptions;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
@@ -14,7 +13,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.index.Index;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.system.config.LoggerUtil;
 import org.system.service.ICmdbInitialService;
@@ -36,6 +34,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
     private MongoTemplate mongoTemplate;
     @Autowired
     private LoggerUtil logger;
+    @Autowired
+    private MongoClient mongoClient;
 
     @Override
     public CommonResult<Object> initCollections(String name) {
@@ -82,161 +82,193 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
     }
 
     public boolean initAll() {
-        // 先清除所有集合
-        MongoDatabase db = mongoTemplate.getDb();
-        MongoIterable<String> collectionNames = db.listCollectionNames();
-        collectionNames.forEach((Consumer<? super String>)  collection -> mongoTemplate.getCollection(collection).drop());
-        // model
+        /**
+         * 注意注意:单节点mongo是不支持事务的,这里我踩了很深的坑!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+         * 报错提示: Transaction numbers are only allowed on a replica set member or mongos
+         */
+        ClientSession clientSession = mongoClient.startSession();
+        clientSession.startTransaction();
         try {
-            MongoCollection<Document> modelCollection = mongoTemplate.getCollection("model");
-            Document modelDoc = Document.parse(new BaseDoc().toString())
-                    .append("group", "模型分组")
-                    .append("parent", "父模型")
-                    .append("remodels", "无向关联的模型");
-            modelCollection.insertOne(modelDoc);
-        } catch (Exception e) {
-            logger.error("model初始化异常, " + e.getMessage());
+            // 先清除所有集合
+            MongoIterable<String> collectionNames = null;
+            try {
+                MongoDatabase db = mongoTemplate.getDb();
+                collectionNames = db.listCollectionNames();
+                // drop不支持事务, 那就直接抛出异常吧
+                collectionNames.forEach((Consumer<? super String>)  collection -> mongoTemplate.getCollection(collection).drop());
+            } catch (Exception e) {
+                logger.error("集合重置时出现异常, " + e.getMessage());
+                throw new Exception("集合重置时出现异常, " + e.getMessage());
+            }
+//            // model
+            try {
+                MongoCollection<Document> modelCollection = mongoTemplate.getCollection("model");
+                Document modelDoc = Document.parse(new BaseDoc().toString())
+                        .append("group", "模型分组")
+                        .append("parent", "父模型")
+                        .append("remodels", "无向关联的模型");
+                modelCollection.insertOne(clientSession, modelDoc);
+            } catch (Exception e) {
+//                clientSession.abortTransaction();
+                logger.error("model初始化异常, " + e.getMessage());
+                throw new Exception("model初始化异常, " + e.getMessage());
+            }
+            // model_group
+            try {
+                MongoCollection<Document> modelGroupCollection = mongoTemplate.getCollection("model_group");
+                Document modelGroupDoc = Document.parse(new BaseDoc().toString())
+                        .append("parentCode", "父级分组")
+                        .append("index", "排序号");
+                modelGroupCollection.insertOne(clientSession, modelGroupDoc);
+            } catch (Exception e) {
+//                clientSession.abortTransaction();
+                logger.error("model_group初始化异常, " + e.getMessage());
+                throw new Exception("model_group初始化异常, " + e.getMessage());
+            }
+            // model_relation
+            try {
+                MongoCollection<Document> modelRelationCollection = mongoTemplate.getCollection("model_relation");
+                Document modelRelationDoc = Document.parse(new BaseDoc().toString())
+                        .append("model1", "模型1，父")
+                        .append("model2", "模型2，子")
+                        .append("relationType", "关系类型");
+                modelRelationCollection.insertOne(clientSession, modelRelationDoc);
+            } catch (Exception e) {
+//                clientSession.abortTransaction();
+                logger.error("model_relation初始化异常, " + e.getMessage());
+                throw new Exception("model_relation初始化异常, " + e.getMessage());
+            }
+            // model_relation_type
+            try {
+                MongoCollection<Document> modelRelationTypeCollection = mongoTemplate.getCollection("model_relation_type");
+                Document modelRelationTypeDoc = Document.parse(new BaseDoc().toString())
+                        .append("type", "0-无向，1-有向");
+                modelRelationTypeCollection.insertOne(clientSession, modelRelationTypeDoc);
+            } catch (Exception e) {
+//                clientSession.abortTransaction();
+                logger.error("model_relation_type初始化异常, " + e.getMessage());
+                throw new Exception("model_relation_type初始化异常, " + e.getMessage());
+            }
+            // field
+            try {
+                MongoCollection<Document> fieldCollection = mongoTemplate.getCollection("field");
+                Document fieldDoc = Document.parse(new BaseDoc().toString())
+                        .append("group", "属性分组")
+                        .append("type", "属性类型")
+                        .append("rule", "校验规则")
+                        .append("model", "所属模型")
+                        .append("relationType", "关系类型（如果属性类型为关系的话）")
+                        .append("remodel", "关联模型")
+                        .append("isDisplay", "是否在列表中展示")
+                        .append("isSearch", "是否作为搜索条件")
+                        .append("isRemote", "是否远程调用获取数据")
+                        .append("remoteURI", "远程接口")
+                        .append("remoteKey", "接口中对应的key")
+                        .append("remoteValue", "接口中value字段")
+                        .append("attributes", " 附加属性，比如下拉多选选项")
+                        .append("index", "排序号");
+                fieldCollection.insertOne(clientSession, fieldDoc);
+            } catch (Exception e) {
+//                clientSession.abortTransaction();
+                logger.error("field初始化异常, " + e.getMessage());
+                throw new Exception("field初始化异常, " + e.getMessage());
+            }
+            // field_type
+            try {
+                MongoCollection<Document> modelFieldTypeCollection = mongoTemplate.getCollection("field_type");
+                Document modelFieldTypeDoc = Document.parse(new BaseDoc().toString());
+                modelFieldTypeCollection.insertOne(clientSession, modelFieldTypeDoc);
+            } catch (Exception e) {
+//                clientSession.abortTransaction();
+                logger.error("field_type初始化异常, " + e.getMessage());
+                throw new Exception("field_type初始化异常, " + e.getMessage());
+            }
+            // field_rule
+            try {
+                MongoCollection<Document> modelFieldRuleCollection = mongoTemplate.getCollection("field_rule");
+                Document modelFieldRuleDoc = Document.parse(new BaseDoc().toString())
+                        .append("fieldType", "属性类型")
+                        .append("regular", "校验规则");
+                modelFieldRuleCollection.insertOne(clientSession, modelFieldRuleDoc);
+            } catch (Exception e) {
+//                clientSession.abortTransaction();
+                logger.error("field_rule初始化异常, " + e.getMessage());
+                throw new Exception("field_rule初始化异常, " + e.getMessage());
+            }
+            // field_group
+            try {
+                MongoCollection<Document> modelFieldGroupCollection = mongoTemplate.getCollection("field_group");
+                Document modelFieldGroupDoc = Document.parse(new BaseDoc().toString())
+                        .append("model", "所属模型")
+                        .append("index", "排序号");
+                modelFieldGroupCollection.insertOne(clientSession, modelFieldGroupDoc);
+            } catch (Exception e) {
+//                clientSession.abortTransaction();
+                logger.error("field_group初始化异常, " + e.getMessage());
+                throw new Exception("field_group初始化异常, " + e.getMessage());
+            }
+            // data
+            try {
+                MongoCollection<Document> dataCollection = mongoTemplate.getCollection("data");
+                Document dataDoc = Document.parse(new BaseDoc().toString())
+                        .append("model", "所属模型");
+                dataCollection.insertOne(clientSession, dataDoc);
+            } catch (Exception e) {
+//                clientSession.abortTransaction();
+                logger.error("data初始化异常, " + e.getMessage());
+                throw new Exception("data初始化异常, " + e.getMessage());
+            }
+            // data_relation
+            try {
+                MongoCollection<Document> dataRelationCollection = mongoTemplate.getCollection("data_relation");
+                Document dataRelationDoc = Document.parse(new BaseDoc().toString())
+                        .append("model1", "模型1")
+                        .append("model2", "模型2")
+                        .append("data1", "实例1")
+                        .append("data2", "实例2")
+                        .append("type", "关系类型");
+                dataRelationCollection.insertOne(clientSession, dataRelationDoc);
+            } catch (Exception e) {
+//                clientSession.abortTransaction();
+                logger.error("data_relation初始化异常, " + e.getMessage());
+                throw new Exception("data_relation初始化异常, " + e.getMessage());
+            }
+            // 所有集合创建好之后，创建索引
+            try {
+                collectionNames.forEach((Consumer<? super String>) collection -> {
+                    createInboxIndex(collection, "code", true, clientSession);  // 唯一索引
+                    // 创建联合索引
+                    switch (collection) {
+                        case "data": {
+                            createUnionIndex(collection, "model,updateTime", clientSession);
+                        } break;
+                        case "field":{
+                            createUnionIndex(collection, "model,index", clientSession);
+                        } break;
+                        case "model_group": {
+                            createUnionIndex(collection, "parentCode,index", clientSession);
+                        } break;
+                        case "data_relation": {
+                            createUnionIndex(collection, "model1,data1,model2", clientSession);
+                            createUnionIndex(collection, "model2,data2,model1", clientSession);
+                        } break;
+                        default: break;
+                    }
+                });
+            } catch (Exception e) {
+                clientSession.abortTransaction();
+                logger.error("索引创建失败, " + e.getMessage());
+                throw new Exception("索引创建失败, " + e.getMessage());
+            }
+            clientSession.commitTransaction();
+            logger.info("所有集合已完成初始化！");
+            return true;
+        }catch (Exception e) {
+            clientSession.abortTransaction();
             return false;
+        }finally {
+            clientSession.close();
         }
-        // model_group
-        try {
-            MongoCollection<Document> modelGroupCollection = mongoTemplate.getCollection("model_group");
-            Document modelGroupDoc = Document.parse(new BaseDoc().toString())
-                    .append("parentCode", "父级分组")
-                    .append("index", "排序号");
-            modelGroupCollection.insertOne(modelGroupDoc);
-        } catch (Exception e) {
-            logger.error("model_group初始化异常, " + e.getMessage());
-            return false;
-        }
-        // model_relation
-        try {
-            MongoCollection<Document> modelRelationCollection = mongoTemplate.getCollection("model_relation");
-            Document modelRelationDoc = Document.parse(new BaseDoc().toString())
-                    .append("model1", "模型1，父")
-                    .append("model2", "模型2，子")
-                    .append("relationType", "关系类型");
-            modelRelationCollection.insertOne(modelRelationDoc);
-        } catch (Exception e) {
-            logger.error("model_relation初始化异常, " + e.getMessage());
-            return false;
-        }
-        // model_relation_type
-        try {
-            MongoCollection<Document> modelRelationTypeCollection = mongoTemplate.getCollection("model_relation_type");
-            Document modelRelationTypeDoc = Document.parse(new BaseDoc().toString())
-                    .append("type", "0-无向，1-有向");
-            modelRelationTypeCollection.insertOne(modelRelationTypeDoc);
-        } catch (Exception e) {
-            logger.error("model_relation_type初始化异常, " + e.getMessage());
-            return false;
-        }
-        // field
-        try {
-            MongoCollection<Document> fieldCollection = mongoTemplate.getCollection("field");
-            Document fieldDoc = Document.parse(new BaseDoc().toString())
-                    .append("group", "属性分组")
-                    .append("type", "属性类型")
-                    .append("rule", "校验规则")
-                    .append("model", "所属模型")
-                    .append("relationType", "关系类型（如果属性类型为关系的话）")
-                    .append("remodel", "关联模型")
-                    .append("isDisplay", "是否在列表中展示")
-                    .append("isSearch", "是否作为搜索条件")
-                    .append("isRemote", "是否远程调用获取数据")
-                    .append("remoteURI", "远程接口")
-                    .append("remoteKey", "接口中对应的key")
-                    .append("remoteValue", "接口中value字段")
-                    .append("attributes", " 附加属性，比如下拉多选选项")
-                    .append("index", "排序号");
-            fieldCollection.insertOne(fieldDoc);
-        } catch (Exception e) {
-            logger.error("field初始化异常, " + e.getMessage());
-            return false;
-        }
-        // field_type
-        try {
-            MongoCollection<Document> modelFieldTypeCollection = mongoTemplate.getCollection("field_type");
-            Document modelFieldTypeDoc = Document.parse(new BaseDoc().toString());
-            modelFieldTypeCollection.insertOne(modelFieldTypeDoc);
-        } catch (Exception e) {
-            logger.error("field_type初始化异常, " + e.getMessage());
-            return false;
-        }
-        // field_rule
-        try {
-            MongoCollection<Document> modelFieldRuleCollection = mongoTemplate.getCollection("field_rule");
-            Document modelFieldRuleDoc = Document.parse(new BaseDoc().toString())
-                    .append("fieldType", "属性类型")
-                    .append("regular", "校验规则");
-            modelFieldRuleCollection.insertOne(modelFieldRuleDoc);
-        } catch (Exception e) {
-            logger.error("field_rule初始化异常, " + e.getMessage());
-            return false;
-        }
-        // field_group
-        try {
-            MongoCollection<Document> modelFieldGroupCollection = mongoTemplate.getCollection("field_group");
-            Document modelFieldGroupDoc = Document.parse(new BaseDoc().toString())
-                    .append("model", "所属模型")
-                    .append("index", "排序号");
-            modelFieldGroupCollection.insertOne(modelFieldGroupDoc);
-        } catch (Exception e) {
-            logger.error("field_group初始化异常, " + e.getMessage());
-            return false;
-        }
-        // data
-        try {
-            MongoCollection<Document> dataCollection = mongoTemplate.getCollection("data");
-            Document dataDoc = Document.parse(new BaseDoc().toString())
-                    .append("model", "所属模型");
-            dataCollection.insertOne(dataDoc);
-        } catch (Exception e) {
-            logger.error("data初始化异常, " + e.getMessage());
-            return false;
-        }
-        // data_relation
-        try {
-            MongoCollection<Document> dataRelationCollection = mongoTemplate.getCollection("data_relation");
-            Document dataRelationDoc = Document.parse(new BaseDoc().toString())
-                    .append("model1", "模型1")
-                    .append("model2", "模型2")
-                    .append("data1", "实例1")
-                    .append("data2", "实例2")
-                    .append("type", "关系类型");
-            dataRelationCollection.insertOne(dataRelationDoc);
-        } catch (Exception e) {
-            logger.error("data初始化异常, " + e.getMessage());
-            return false;
-        }
-        // 所有集合创建好之后，创建索引
-        try {
-            collectionNames.forEach((Consumer<? super String>) collection -> {
-                createInboxIndex(collection, "code", true);  // 唯一索引
-                // 创建联合索引
-                switch (collection) {
-                    case "data": {
-                        createUnionIndex(collection, "model,updateTime");
-                    } break;
-                    case "field":{
-                        createUnionIndex(collection, "model,index");
-                    } break;
-                    case "model_group": {
-                        createUnionIndex(collection, "parentCode,index");
-                    } break;
-                    case "data_relation": {
-                        createUnionIndex(collection, "model1,data1,model2");
-                        createUnionIndex(collection, "model2,data2,model1");
-                    } break;
-                    default: break;
-                }
-            });
-        } catch (Exception e) {
-            logger.error("索引创建失败, " + e.getMessage());
-            return false;
-        }
-        logger.info("所有集合已完成初始化！");
-        return true;
     }
 
 
@@ -286,13 +318,19 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
      * @param collectionName 集合名称
      * @param keys           字段
      */
-    private void createUnionIndex(String collectionName, String keys) {
+    private void createUnionIndex(String collectionName, String keys, ClientSession session) {
         try {
             Index index = new Index();
             for (String key : keys.split(",")) {
                 index = index.on(key.trim(), Sort.Direction.ASC);
             }
-            mongoTemplate.indexOps(collectionName).ensureIndex(index);
+            if (session == null) {
+//                mongoTemplate.indexOps(collectionName).ensureIndex(index);
+                mongoTemplate.getCollection(collectionName).createIndex(index.getIndexKeys());
+            }else {
+//                mongoTemplate.withSession(session).indexOps(collectionName).ensureIndex(index);
+                mongoTemplate.withSession(session).getCollection(collectionName).createIndex(index.getIndexKeys());
+            }
         } catch (Exception ex) {
             throw new RuntimeException("建立索引异常，" + ex.getMessage());
         }
@@ -305,13 +343,20 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
      * @param key            需要建立索引的字段
      * @param unique         是否唯一，true唯一
      */
-    public void createInboxIndex(String collectionName, String key, boolean unique) {
+    public void createInboxIndex(String collectionName, String key, boolean unique, ClientSession session) {
         try {
             Index index = new Index().on(key.trim(), Sort.Direction.ASC);
+            IndexOptions indexOptions = new IndexOptions();
             if (unique) {
-                index.unique();
+                indexOptions.unique(true).background(true);
             }
-            mongoTemplate.indexOps(collectionName).ensureIndex(index);
+            if (session == null) {
+//                mongoTemplate.indexOps(collectionName).ensureIndex(index);
+                mongoTemplate.getCollection(collectionName).createIndex(index.getIndexKeys(), indexOptions);
+            }else {
+//                mongoTemplate.withSession(session).indexOps(collectionName).ensureIndex(index);
+                mongoTemplate.withSession(session).getCollection(collectionName).createIndex(index.getIndexKeys(), indexOptions);
+            }
 
         } catch (Exception ex) {
             throw new RuntimeException("建立索引异常，" + ex.getMessage());
