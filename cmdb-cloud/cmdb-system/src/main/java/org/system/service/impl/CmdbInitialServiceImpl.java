@@ -16,6 +16,7 @@ import org.springframework.data.mongodb.core.index.Index;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
+import org.system.config.LoggerUtil;
 import org.system.service.ICmdbInitialService;
 
 import java.util.function.Consumer;
@@ -33,9 +34,11 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
 
     @Autowired
     private MongoTemplate mongoTemplate;
+    @Autowired
+    private LoggerUtil logger;
 
     @Override
-    public CommonResult initCollections(String name) {
+    public CommonResult<Object> initCollections(String name) {
         // 断言，抛出异常，如何返回统一的结果呢
         Assert.isTrue(StringUtils.isNotBlank(name), ResultCodeEnum.VALIDATE_FAILED.getMessage());
         boolean initRes = false;
@@ -77,7 +80,7 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
         }
         return initRes ? CommonResult.success(null, ResultCodeEnum.SUCCESS.getMessage()) : CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
     }
-    @Transactional(rollbackFor = Exception.class)
+
     public boolean initAll() {
         // 先清除所有集合
         MongoDatabase db = mongoTemplate.getDb();
@@ -92,7 +95,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                     .append("remodels", "无向关联的模型");
             modelCollection.insertOne(modelDoc);
         } catch (Exception e) {
-            throw new RuntimeException("model初始化异常, " + e.getMessage());
+            logger.error("model初始化异常, " + e.getMessage());
+            return false;
         }
         // model_group
         try {
@@ -102,7 +106,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                     .append("index", "排序号");
             modelGroupCollection.insertOne(modelGroupDoc);
         } catch (Exception e) {
-            throw new RuntimeException("model_group初始化异常, " + e.getMessage());
+            logger.error("model_group初始化异常, " + e.getMessage());
+            return false;
         }
         // model_relation
         try {
@@ -113,7 +118,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                     .append("relationType", "关系类型");
             modelRelationCollection.insertOne(modelRelationDoc);
         } catch (Exception e) {
-            throw new RuntimeException("model_relation初始化异常, " + e.getMessage());
+            logger.error("model_relation初始化异常, " + e.getMessage());
+            return false;
         }
         // model_relation_type
         try {
@@ -122,7 +128,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                     .append("type", "0-无向，1-有向");
             modelRelationTypeCollection.insertOne(modelRelationTypeDoc);
         } catch (Exception e) {
-            throw new RuntimeException("model_relation_type初始化异常, " + e.getMessage());
+            logger.error("model_relation_type初始化异常, " + e.getMessage());
+            return false;
         }
         // field
         try {
@@ -144,7 +151,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                     .append("index", "排序号");
             fieldCollection.insertOne(fieldDoc);
         } catch (Exception e) {
-            throw new RuntimeException("field初始化异常, " + e.getMessage());
+            logger.error("field初始化异常, " + e.getMessage());
+            return false;
         }
         // field_type
         try {
@@ -152,7 +160,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
             Document modelFieldTypeDoc = Document.parse(new BaseDoc().toString());
             modelFieldTypeCollection.insertOne(modelFieldTypeDoc);
         } catch (Exception e) {
-            throw new RuntimeException("field_type初始化异常, " + e.getMessage());
+            logger.error("field_type初始化异常, " + e.getMessage());
+            return false;
         }
         // field_rule
         try {
@@ -162,7 +171,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                     .append("regular", "校验规则");
             modelFieldRuleCollection.insertOne(modelFieldRuleDoc);
         } catch (Exception e) {
-            throw new RuntimeException("field_rule初始化异常, " + e.getMessage());
+            logger.error("field_rule初始化异常, " + e.getMessage());
+            return false;
         }
         // field_group
         try {
@@ -172,7 +182,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                     .append("index", "排序号");
             modelFieldGroupCollection.insertOne(modelFieldGroupDoc);
         } catch (Exception e) {
-            throw new RuntimeException("field_group初始化异常, " + e.getMessage());
+            logger.error("field_group初始化异常, " + e.getMessage());
+            return false;
         }
         // data
         try {
@@ -181,7 +192,8 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                     .append("model", "所属模型");
             dataCollection.insertOne(dataDoc);
         } catch (Exception e) {
-            throw new RuntimeException("data初始化异常, " + e.getMessage());
+            logger.error("data初始化异常, " + e.getMessage());
+            return false;
         }
         // data_relation
         try {
@@ -194,30 +206,36 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                     .append("type", "关系类型");
             dataRelationCollection.insertOne(dataRelationDoc);
         } catch (Exception e) {
-            throw new RuntimeException("data初始化异常, " + e.getMessage());
+            logger.error("data初始化异常, " + e.getMessage());
+            return false;
         }
         // 所有集合创建好之后，创建索引
-        collectionNames.forEach((Consumer<? super String>) collection -> {
-            createInboxIndex(collection, "code", true);  // 唯一索引
-            // 创建联合索引
-            switch (collection) {
-                case "data": {
-                    createUnionIndex(collection, "model,updateTime");
-                } break;
-                case "field":{
-                    createUnionIndex(collection, "model,index");
-                } break;
-                case "model_group": {
-                    createUnionIndex(collection, "parentCode,index");
-                } break;
-                case "data_relation": {
-                    createUnionIndex(collection, "model1,data1,model2");
-                    createUnionIndex(collection, "model2,data2,model1");
-                } break;
-                default: break;
-            }
-
-        });
+        try {
+            collectionNames.forEach((Consumer<? super String>) collection -> {
+                createInboxIndex(collection, "code", true);  // 唯一索引
+                // 创建联合索引
+                switch (collection) {
+                    case "data": {
+                        createUnionIndex(collection, "model,updateTime");
+                    } break;
+                    case "field":{
+                        createUnionIndex(collection, "model,index");
+                    } break;
+                    case "model_group": {
+                        createUnionIndex(collection, "parentCode,index");
+                    } break;
+                    case "data_relation": {
+                        createUnionIndex(collection, "model1,data1,model2");
+                        createUnionIndex(collection, "model2,data2,model1");
+                    } break;
+                    default: break;
+                }
+            });
+        } catch (Exception e) {
+            logger.error("索引创建失败, " + e.getMessage());
+            return false;
+        }
+        logger.info("所有集合已完成初始化！");
         return true;
     }
 

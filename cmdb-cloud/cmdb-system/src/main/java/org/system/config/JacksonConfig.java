@@ -29,7 +29,13 @@ public class JacksonConfig implements InitializingBean {
     @Override
     public void afterPropertiesSet() {
         SimpleModule simpleModule = new SimpleModule();
+        /**
+         * 添加针对ObjectId的String序列化器
+         */
         simpleModule.addSerializer(ObjectId.class, ToStringSerializer.instance);
+        /**
+         * 添加针对ObjectId的ObjectId返序列化器
+         */
         simpleModule.addDeserializer(ObjectId.class, new ObjectIdDeserializer());
         objectMapper.registerModule(simpleModule);
     }
