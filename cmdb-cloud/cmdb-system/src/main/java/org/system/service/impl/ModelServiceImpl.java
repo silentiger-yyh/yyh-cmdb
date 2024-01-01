@@ -43,54 +43,50 @@ public class ModelServiceImpl implements IModelService {
     private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER_NAME);
 
     @Override
-    public CommonResult<Object> saveModel(Model model, Integer flag) {
+    public CommonResult<Object> saveModel(Model model) {
         if (StringUtils.isBlank(model.getEname())) {
             model.setEname(Pinyin4jUtil.convertToFirstUpper(model.getName()));
         }
+        boolean flag = model.get_id() == null;
         // 为空的(null||"")字段不会转
         Document document = Document.parse(JSON.toJSONString(model));
         Date date = new Date();
-        switch (flag) {
-            case 0: { // 新增
-                document.append("_id", new ObjectId())
-                        .append("createTime", date)
-                        .append("updateTime", date)
-                        .append("status", 0);
-                try {
-                    Query query = Query.query(Criteria.where("code").is(model.getCode()));
-                    List<Document> models = mongoTemplate.find(query, Document.class, CmdbConstant.MODEL_COLLECTION_NAME);
-                    if (!models.isEmpty()) {
-                        throw new Exception("编码重复");
-                    }
-                    mongoTemplate.getCollection(CmdbConstant.MODEL_COLLECTION_NAME).insertOne(document);
-                } catch (Exception e) {
-                    logger.error("新增失败: "+e.getMessage() + "(" + document.get("code") + ")");
-                    return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+        if (flag) { // 新增
+            document.append("createTime", date)
+                    .append("updateTime", date)
+                    .append("status", 0);
+            try {
+                Query query = Query.query(Criteria.where("code").is(model.getCode()).and("status").is(0));
+                List<Document> models = mongoTemplate.find(query, Document.class, CmdbConstant.MODEL_COLLECTION_NAME);
+                if (!models.isEmpty()) {
+                    throw new Exception("新增失败: 编码重复 (" + document.get("code") + ")");
                 }
-            } break;
-            case 1: {  // 修改
-                try {
-                    Query query = Query.query(Criteria.where("_id").is(model.get_id()));
-                    Update updates = new Update();
-                    document.keySet().forEach(key -> {
-                        if (!key.equals("_id") && !key.contains("Time")) {
-                            updates.set(key, document.get(key));
-                        }
-                    });
-                    updates.set("updateTime", date);
-                    Document updateDoc = mongoTemplate.findAndModify(query, updates, Document.class, CmdbConstant.MODEL_COLLECTION_NAME);
-                    if (updateDoc == null) {
-                        throw new Exception("记录不存在");
+                mongoTemplate.getCollection(CmdbConstant.MODEL_COLLECTION_NAME).insertOne(document);
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+                return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+            }
+        } else  {  // 修改
+            try {
+                Query query = Query.query(Criteria.where("_id").is(model.get_id()).and("status").is(0));
+                Update updates = new Update();
+                document.keySet().forEach(key -> {
+                    if (!key.equals("_id") && !key.contains("Time")) {
+                        updates.set(key, document.get(key));
                     }
-                } catch (Exception e) {
-                    logger.error("修改失败: " + e.getMessage() + "(" + document + ")");
-                    return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+                });
+                updates.set("updateTime", date);
+                // 查询记录并修改，返回旧纪录
+                Document updateDoc = mongoTemplate.findAndModify(query, updates, Document.class, CmdbConstant.MODEL_COLLECTION_NAME);
+                if (updateDoc == null) {
+                    throw new Exception("修改失败: 记录不存在 (" + document + ")");
                 }
-            }break;
-            default: break;
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+                return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+            }
         }
-        String msg = flag == 0 ? "新增成功(" + document + ")" : "修改成功(" + document + ")";
-        logger.info(msg);
+        logger.info(flag ? "新增成功(" + document + ")" : "修改成功(" + document + ")");
         return CommonResult.success(ResultCodeEnum.SUCCESS.getMessage());
     }
 

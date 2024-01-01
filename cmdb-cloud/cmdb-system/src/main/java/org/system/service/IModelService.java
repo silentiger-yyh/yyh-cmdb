@@ -11,7 +11,7 @@ import org.system.entity.Model;
  */
 
 public interface IModelService {
-    CommonResult<Object> saveModel(Model document, Integer flag);
+    CommonResult<Object> saveModel(Model document);
 
     CommonResult<Object> getModelInfoById(String id);
 }

@@ -1,4 +1,4 @@
-package org.system.controller.init;
+package org.system.controller;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -28,5 +28,11 @@ public class InitController {
     @ApiOperation("初始化集合")
     public CommonResult initApi(@PathVariable @ApiParam(name = "name", value = "集合名称") String name) {
         return cmdbInitialService.initCollections(name);
+    }
+
+    @PostMapping("/index")
+    @ApiOperation("初始化之后创建索引")
+    public CommonResult<Object> createIndex() {
+        return cmdbInitialService.createIndex();
     }
 }

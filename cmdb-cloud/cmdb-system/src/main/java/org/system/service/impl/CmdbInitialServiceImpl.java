@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.system.service.ICmdbInitialService;
 
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -96,19 +97,20 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
         clientSession.startTransaction();
         try {
             // 先清除所有集合
-            MongoIterable<String> collectionNames = null;
+            Set<String> collectionNames = mongoTemplate.getCollectionNames();
             try {
-                MongoDatabase db = mongoTemplate.getDb();
-                collectionNames = db.listCollectionNames();
                 // drop不支持事务, 那就直接抛出异常吧
-                collectionNames.forEach((Consumer<? super String>)  collection -> mongoTemplate.getCollection(collection).drop());
+                for (String collection : collectionNames) {
+                    mongoTemplate.getCollection(collection).drop();
+                }
+//                collectionNames.forEach((Consumer<? super String>)  collection -> mongoTemplate.getCollection(collection).drop());
             } catch (Exception e) {
                 logger.error("集合重置时出现异常, " + e.getMessage());
                 throw new Exception("集合重置时出现异常, " + e.getMessage());
             }
 //            // model
             try {
-                MongoCollection<Document> modelCollection = mongoTemplate.getCollection("model");
+                MongoCollection<Document> modelCollection = mongoTemplate.getCollection(CmdbConstant.MODEL_COLLECTION_NAME);
                 Document modelDoc = Document.parse(new BaseDoc().toString())
                         .append("group", "模型分组")
                         .append("parent", "父模型")
@@ -120,9 +122,9 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
             }
             // model_group
             try {
-                MongoCollection<Document> modelGroupCollection = mongoTemplate.getCollection("model_group");
+                MongoCollection<Document> modelGroupCollection = mongoTemplate.getCollection(CmdbConstant.MODEL_GROUP_COLLECTION_NAME);
                 Document modelGroupDoc = Document.parse(new BaseDoc().toString())
-                        .append("parentCode", "父级分组")
+                        .append("parent", "父级分组")
                         .append("index", "排序号");
                 modelGroupCollection.insertOne(clientSession, modelGroupDoc);
             } catch (Exception e) {
@@ -131,7 +133,7 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
             }
             // model_relation
             try {
-                MongoCollection<Document> modelRelationCollection = mongoTemplate.getCollection("model_relation");
+                MongoCollection<Document> modelRelationCollection = mongoTemplate.getCollection(CmdbConstant.MODEL_RELATION_COLLECTION_NAME);
                 Document modelRelationDoc = Document.parse(new BaseDoc().toString())
                         .append("model1", "模型1，父")
                         .append("model2", "模型2，子")
@@ -143,7 +145,7 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
             }
             // model_relation_type
             try {
-                MongoCollection<Document> modelRelationTypeCollection = mongoTemplate.getCollection("model_relation_type");
+                MongoCollection<Document> modelRelationTypeCollection = mongoTemplate.getCollection(CmdbConstant.MODEL_RELATION_TYPE_COLLECTION_NAME);
                 Document modelRelationTypeDoc = Document.parse(new BaseDoc().toString())
                         .append("type", "0-无向，1-有向");
                 modelRelationTypeCollection.insertOne(clientSession, modelRelationTypeDoc);
@@ -153,7 +155,7 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
             }
             // field
             try {
-                MongoCollection<Document> fieldCollection = mongoTemplate.getCollection("field");
+                MongoCollection<Document> fieldCollection = mongoTemplate.getCollection(CmdbConstant.FIELD_COLLECTION_NAME);
                 Document fieldDoc = Document.parse(new BaseDoc().toString())
                         .append("group", "属性分组")
                         .append("type", "属性类型")
@@ -176,7 +178,7 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
             }
             // field_type
             try {
-                MongoCollection<Document> modelFieldTypeCollection = mongoTemplate.getCollection("field_type");
+                MongoCollection<Document> modelFieldTypeCollection = mongoTemplate.getCollection(CmdbConstant.FIELD_TYPE_COLLECTION_NAME);
                 Document modelFieldTypeDoc = Document.parse(new BaseDoc().toString());
                 modelFieldTypeCollection.insertOne(clientSession, modelFieldTypeDoc);
             } catch (Exception e) {
@@ -185,7 +187,7 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
             }
             // field_rule
             try {
-                MongoCollection<Document> modelFieldRuleCollection = mongoTemplate.getCollection("field_rule");
+                MongoCollection<Document> modelFieldRuleCollection = mongoTemplate.getCollection(CmdbConstant.FIELD_RULE_COLLECTION_NAME);
                 Document modelFieldRuleDoc = Document.parse(new BaseDoc().toString())
                         .append("fieldType", "属性类型")
                         .append("regular", "校验规则");
@@ -196,7 +198,7 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
             }
             // field_group
             try {
-                MongoCollection<Document> modelFieldGroupCollection = mongoTemplate.getCollection("field_group");
+                MongoCollection<Document> modelFieldGroupCollection = mongoTemplate.getCollection(CmdbConstant.FIELD_GROUP_COLLECTION_NAME);
                 Document modelFieldGroupDoc = Document.parse(new BaseDoc().toString())
                         .append("model", "所属模型")
                         .append("index", "排序号");
@@ -207,7 +209,7 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
             }
             // data
             try {
-                MongoCollection<Document> dataCollection = mongoTemplate.getCollection("data");
+                MongoCollection<Document> dataCollection = mongoTemplate.getCollection(CmdbConstant.DATA_COLLECTION_NAME);
                 Document dataDoc = Document.parse(new BaseDoc().toString())
                         .append("model", "所属模型");
                 dataCollection.insertOne(clientSession, dataDoc);
@@ -218,7 +220,7 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
             }
             // data_relation
             try {
-                MongoCollection<Document> dataRelationCollection = mongoTemplate.getCollection("data_relation");
+                MongoCollection<Document> dataRelationCollection = mongoTemplate.getCollection(CmdbConstant.DATA_RELATION_COLLECTION_NAME);
                 Document dataRelationDoc = Document.parse(new BaseDoc().toString())
                         .append("model1", "模型1")
                         .append("model2", "模型2")
@@ -230,35 +232,9 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
                 logger.error("data_relation初始化异常, " + e.getMessage());
                 throw new Exception("data_relation初始化异常, " + e.getMessage());
             }
-            // 所有集合创建好之后，创建索引
-            try {
-                collectionNames.forEach((Consumer<? super String>) collection -> {
-                    createInboxIndex(collection, "code", true, clientSession);  // 唯一索引
-                    // 创建联合索引
-                    switch (collection) {
-                        case "data": {
-                            createUnionIndex(collection, "model,updateTime", clientSession);
-                        } break;
-                        case "field":{
-                            createUnionIndex(collection, "model,index", clientSession);
-                        } break;
-                        case "model_group": {
-                            createUnionIndex(collection, "parentCode,index", clientSession);
-                        } break;
-                        case "data_relation": {
-                            createUnionIndex(collection, "model1,data1,model2", clientSession);
-                            createUnionIndex(collection, "model2,data2,model1", clientSession);
-                        } break;
-                        default: break;
-                    }
-                });
-            } catch (Exception e) {
-                clientSession.abortTransaction();
-                logger.error("索引创建失败, " + e.getMessage());
-                throw new Exception("索引创建失败, " + e.getMessage());
-            }
             clientSession.commitTransaction();
             logger.info("所有集合已完成初始化！");
+            createIndex();
             return true;
         }catch (Exception e) {
             clientSession.abortTransaction();
@@ -310,6 +286,52 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
     }
 
     /**
+     * 所有集合创建好之后，创建索引
+     * @return
+     */
+    @Override
+    public CommonResult<Object> createIndex() {
+        try(ClientSession clientSession = mongoClient.startSession()) {
+            try {
+                Set<String> collectionNames = mongoTemplate.getCollectionNames();
+                clientSession.startTransaction();
+                for (String collection : collectionNames) {
+                    // 唯一索引
+                    createInboxIndex(collection, "code", true, clientSession);
+                    // 创建联合索引
+                    switch (collection) {
+                        case "data": {
+                            createUnionIndex(collection, "model,updateTime", clientSession);
+                        }
+                        break;
+                        case "field": {
+                            createUnionIndex(collection, "model,index", clientSession);
+                        }
+                        break;
+                        case "model_group": {
+                            createUnionIndex(collection, "parent,index", clientSession);
+                        }
+                        break;
+                        case "data_relation": {
+                            createUnionIndex(collection, "model1,data1,model2", clientSession);
+                            createUnionIndex(collection, "model2,data2,model1", clientSession);
+                        }
+                        break;
+                        default:
+                            break;
+                    }
+                }
+                clientSession.commitTransaction();
+                return CommonResult.success(ResultCodeEnum.SUCCESS.getMessage());
+            } catch (Exception e) {
+                clientSession.abortTransaction();
+                logger.error("索引创建失败, " + e.getMessage());
+                return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+            }
+        }
+    }
+
+    /**
      * 创建联合索引
      *
      * @param collectionName 集合名称
@@ -322,8 +344,8 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
                 index = index.on(key.trim(), Sort.Direction.ASC);
             }
             if (session == null) {
-//                mongoTemplate.indexOps(collectionName).ensureIndex(index);
-                mongoTemplate.getCollection(collectionName).createIndex(index.getIndexKeys());
+                mongoTemplate.indexOps(collectionName).ensureIndex(index);
+//                mongoTemplate.getCollection(collectionName).createIndex(index.getIndexKeys());
             }else {
 //                mongoTemplate.withSession(session).indexOps(collectionName).ensureIndex(index);
                 mongoTemplate.withSession(session).getCollection(collectionName).createIndex(index.getIndexKeys());
@@ -345,11 +367,12 @@ private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER
             Index index = new Index().on(key.trim(), Sort.Direction.ASC);
             IndexOptions indexOptions = new IndexOptions();
             if (unique) {
-                indexOptions.unique(true).background(true);
+//                index = index.unique();
+                indexOptions.unique(true);
             }
             if (session == null) {
-//                mongoTemplate.indexOps(collectionName).ensureIndex(index);
-                mongoTemplate.getCollection(collectionName).createIndex(index.getIndexKeys(), indexOptions);
+                mongoTemplate.indexOps(collectionName).ensureIndex(index);
+//                mongoTemplate.getCollection(collectionName).createIndex(index.getIndexKeys(), indexOptions);
             }else {
 //                mongoTemplate.withSession(session).indexOps(collectionName).ensureIndex(index);
                 mongoTemplate.withSession(session).getCollection(collectionName).createIndex(index.getIndexKeys(), indexOptions);

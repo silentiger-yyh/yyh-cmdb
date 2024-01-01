@@ -30,20 +30,14 @@ public class ModelController {
     @Autowired
     private IModelService modelService;
 
-    @PostMapping("/add")
+    @PostMapping("/save")
     @ApiOperation("保存模型信息")
-    public CommonResult<Object> addModelInfo(@RequestBody @Valid Model model) {
-        return modelService.saveModel(model, 0);
-    }
-    @PostMapping("/edit")
-    @ApiOperation("保存模型信息")
-    public CommonResult<Object> editModelInfo(@RequestBody @Valid Model model) {
-        return modelService.saveModel(model, 1);
+    public CommonResult<Object> saveModelInfo(@RequestBody @Valid Model model) {
+        return modelService.saveModel(model);
     }
     @GetMapping("/get/{id}")
     @ApiOperation("根据Id获取模型信息")
     public CommonResult<Object> getModelInfoById(@ApiParam(name = "id", value = "模型记录id") @PathVariable String id) {
         return modelService.getModelInfoById(id);
     }
-
 }

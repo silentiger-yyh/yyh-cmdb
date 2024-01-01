@@ -1,5 +1,6 @@
 package org.system.service;
 
+import com.mongodb.client.ClientSession;
 import org.silentiger.api.CommonResult;
 
 /**
@@ -12,5 +13,16 @@ import org.silentiger.api.CommonResult;
 
 public interface ICmdbInitialService {
 
-    CommonResult initCollections(String name);
+    /**
+     * 初始化创建集合
+     * @param name
+     * @return
+     */
+    CommonResult<Object> initCollections(String name);
+
+    /**
+     * 初始化时创建索引
+     * @return
+     */
+    CommonResult<Object> createIndex();
 }
