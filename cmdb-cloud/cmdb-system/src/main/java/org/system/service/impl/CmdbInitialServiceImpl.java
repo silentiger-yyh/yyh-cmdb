@@ -7,14 +7,17 @@ import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.silentiger.api.CommonResult;
+import org.silentiger.constant.CmdbConstant;
 import org.silentiger.enumeration.ResultCodeEnum;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.index.Index;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
-import org.system.config.LoggerUtil;
 import org.system.service.ICmdbInitialService;
 
 import java.util.function.Consumer;
@@ -32,10 +35,12 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
 
     @Autowired
     private MongoTemplate mongoTemplate;
-    @Autowired
-    private LoggerUtil logger;
+//    @Autowired
+//    @Qualifier(value = "logger")
+//    private Logger logger;
     @Autowired
     private MongoClient mongoClient;
+private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER_NAME);
 
     @Override
     public CommonResult<Object> initCollections(String name) {
@@ -85,6 +90,7 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
         /**
          * 注意注意:单节点mongo是不支持事务的,这里我踩了很深的坑!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
          * 报错提示: Transaction numbers are only allowed on a replica set member or mongos
+         * 如果不想部署集群的话,单节点也是可以以副本集的方式启动
          */
         ClientSession clientSession = mongoClient.startSession();
         clientSession.startTransaction();
@@ -109,7 +115,6 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                         .append("remodels", "无向关联的模型");
                 modelCollection.insertOne(clientSession, modelDoc);
             } catch (Exception e) {
-//                clientSession.abortTransaction();
                 logger.error("model初始化异常, " + e.getMessage());
                 throw new Exception("model初始化异常, " + e.getMessage());
             }
@@ -121,7 +126,6 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                         .append("index", "排序号");
                 modelGroupCollection.insertOne(clientSession, modelGroupDoc);
             } catch (Exception e) {
-//                clientSession.abortTransaction();
                 logger.error("model_group初始化异常, " + e.getMessage());
                 throw new Exception("model_group初始化异常, " + e.getMessage());
             }
@@ -134,7 +138,6 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                         .append("relationType", "关系类型");
                 modelRelationCollection.insertOne(clientSession, modelRelationDoc);
             } catch (Exception e) {
-//                clientSession.abortTransaction();
                 logger.error("model_relation初始化异常, " + e.getMessage());
                 throw new Exception("model_relation初始化异常, " + e.getMessage());
             }
@@ -145,7 +148,6 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                         .append("type", "0-无向，1-有向");
                 modelRelationTypeCollection.insertOne(clientSession, modelRelationTypeDoc);
             } catch (Exception e) {
-//                clientSession.abortTransaction();
                 logger.error("model_relation_type初始化异常, " + e.getMessage());
                 throw new Exception("model_relation_type初始化异常, " + e.getMessage());
             }
@@ -169,7 +171,6 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                         .append("index", "排序号");
                 fieldCollection.insertOne(clientSession, fieldDoc);
             } catch (Exception e) {
-//                clientSession.abortTransaction();
                 logger.error("field初始化异常, " + e.getMessage());
                 throw new Exception("field初始化异常, " + e.getMessage());
             }
@@ -179,7 +180,6 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                 Document modelFieldTypeDoc = Document.parse(new BaseDoc().toString());
                 modelFieldTypeCollection.insertOne(clientSession, modelFieldTypeDoc);
             } catch (Exception e) {
-//                clientSession.abortTransaction();
                 logger.error("field_type初始化异常, " + e.getMessage());
                 throw new Exception("field_type初始化异常, " + e.getMessage());
             }
@@ -191,7 +191,6 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                         .append("regular", "校验规则");
                 modelFieldRuleCollection.insertOne(clientSession, modelFieldRuleDoc);
             } catch (Exception e) {
-//                clientSession.abortTransaction();
                 logger.error("field_rule初始化异常, " + e.getMessage());
                 throw new Exception("field_rule初始化异常, " + e.getMessage());
             }
@@ -203,7 +202,6 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                         .append("index", "排序号");
                 modelFieldGroupCollection.insertOne(clientSession, modelFieldGroupDoc);
             } catch (Exception e) {
-//                clientSession.abortTransaction();
                 logger.error("field_group初始化异常, " + e.getMessage());
                 throw new Exception("field_group初始化异常, " + e.getMessage());
             }
@@ -229,7 +227,6 @@ public class CmdbInitialServiceImpl implements ICmdbInitialService {
                         .append("type", "关系类型");
                 dataRelationCollection.insertOne(clientSession, dataRelationDoc);
             } catch (Exception e) {
-//                clientSession.abortTransaction();
                 logger.error("data_relation初始化异常, " + e.getMessage());
                 throw new Exception("data_relation初始化异常, " + e.getMessage());
             }

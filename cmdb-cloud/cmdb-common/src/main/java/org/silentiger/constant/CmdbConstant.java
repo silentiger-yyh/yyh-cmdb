@@ -9,4 +9,6 @@ package org.silentiger.constant;
 
 public class CmdbConstant {
     public static final String MODEL_COLLECTION_NAME = "model";
+
+    public static final String LOGGER_NAME = "cmdb-system-log";
 }

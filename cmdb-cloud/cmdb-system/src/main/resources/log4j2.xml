@@ -7,14 +7,18 @@
     <Properties>
         <!-- 格式化输出：%date表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度 %msg：日志消息，%n是换行符-->
         <!-- %logger{36} 表示 Logger 名字最长36个字符 -->
-        <property name="LOG_PATTERN" value="%date{HH:mm:ssSSS}{GMT+8}[%thread] %-5level %logger{36} - %msg%n" />
-        <!-- 定义日志存储的路径 -->
+        <!-- 详细格式参考 https://blog.csdn.net/Q176782/article/details/78288734-->
+        <property name="LOG_PATTERN"
+                  value="%date{HH:mm:ssSSS}{GMT+8}[%thread] %highlight{%-5level}{ERROR=Bright RED, WARN=Bright Yellow, INFO=Bright Green, DEBUG=Bright Cyan, TRACE=Bright White} %logger{36} %style{%C.%M(%L)}{cyan}: %msg%n" />
+        <!-- 定义日志存储的路径(文件存储方式) -->
         <property name="FILE_PATH" value="logs" />
         <property name="FILE_NAME" value="HISTORY-LOG" />
     </Properties>
 
     <appenders>
-        <!-- 配置mongdb appender -->
+        <!-- 配置mongdb appender
+            注意：配置的用户一定要有数据的认证权限，否则启动会报错
+        -->
         <NoSql name="CMDBSystemInfoAppender">
             <!--参数分别是：数据库名，集合名，服务器ip，端口。还可以指定其他参数或升级版本，详情请看：http://logging.apache.org/log4j/2.x/manual/appenders.html#NoSQLAppender-->
             <MongoDb databaseName="silentiger-cmdb-log" collectionName="cmdb_system_info_log" server="192.168.83.141" port="27017"
@@ -34,6 +38,7 @@
             <!--控制台只输出level及其以上级别的信息（onMatch），其他的直接拒绝（onMismatch）-->
             <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
         </console>
+
 
         <!--文件会打印出所有信息，这个log每次运行程序会自动清空，由append属性决定，适合临时测试用-->
         <File name="Filelog" fileName="${FILE_PATH}/test.log" append="false">
@@ -103,13 +108,18 @@
             比如下面这两个，
                 所有>=info级别的都存放到cmdb_system_info_log集合中
                 所有>=error级别的都存放到cmdb_system_error_log集合中
-            此外，下面这两个name不能重复，否则会被覆盖，其中有一个不会生效
+            name也可以配置成顶层包名，然后在getLogger的时候获取类名，也可以生效，这样在控制台打印的时候能看到哪个类哪个方法的哪一行出了问题
+            但是这样会有一个问题就是存入数据库的LoggerName就会是全类名，这样在查询一个服务的日志的时候就需要根据包名进行模糊匹配，而且数据库中也会存储日志源也能查看源头
+            所以我就直接使用自定义名称
         -->
-        <Logger name="cmdb-system-info" level="info" additivity="false">
+<!--        <Logger name="org.system" level="info" additivity="false">-->
+        <Logger name="cmdb-system-log" level="info" additivity="false">
+            <!-- 对于>=INFO级别的信息，单独用一个集合来保存 -->
             <AppenderRef ref="CMDBSystemInfoAppender"/>
-        </Logger>
-        <Logger name="cmdb-system-error" level="error" additivity="false">
+            <!-- 对于ERROR信息，单独用一个集合来保存 -->
             <AppenderRef ref="CMDBSystemErrorAppender"/>
+            <!-- 为了调试方便，控制台也要打印一份日志 -->
+            <AppenderRef ref="Console"/>
         </Logger>
 
         <root level="info">

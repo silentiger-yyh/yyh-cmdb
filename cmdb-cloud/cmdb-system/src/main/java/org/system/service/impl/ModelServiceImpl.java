@@ -1,23 +1,22 @@
 package org.system.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.mongodb.client.result.UpdateResult;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.silentiger.api.CommonResult;
 import org.silentiger.constant.CmdbConstant;
+import org.silentiger.enumeration.ResultCodeEnum;
 import org.silentiger.util.Pinyin4jUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
-import org.system.config.LoggerUtil;
 import org.system.entity.Model;
 import org.system.service.IModelService;
 
@@ -37,8 +36,11 @@ public class ModelServiceImpl implements IModelService {
 
     @Autowired
     private MongoTemplate mongoTemplate;
-    @Autowired
-    private LoggerUtil logger;
+//    @Autowired
+//    private Logger logger;
+
+//    private static final Logger logger = LoggerFactory.getLogger(ModelServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER_NAME);
 
     @Override
     public CommonResult<Object> saveModel(Model model, Integer flag) {
@@ -60,34 +62,36 @@ public class ModelServiceImpl implements IModelService {
                     if (!models.isEmpty()) {
                         throw new Exception("编码重复");
                     }
-//                    mongoTemplate.getCollection(CmdbConstant.MODEL_COLLECTION_NAME).insertOne(document);
-                    mongoTemplate.insert(document, CmdbConstant.MODEL_COLLECTION_NAME);
+                    mongoTemplate.getCollection(CmdbConstant.MODEL_COLLECTION_NAME).insertOne(document);
                 } catch (Exception e) {
                     logger.error("新增失败: "+e.getMessage() + "(" + document.get("code") + ")");
-                    return CommonResult.failed("新增失败");
+                    return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
                 }
             } break;
             case 1: {  // 修改
-                Query query = Query.query(Criteria.where("_id").is(model.get_id()));
-                Update updates = new Update();
-                document.keySet().forEach(key -> {
-                    if (!key.equals("_id") && !key.contains("Time")) {
-                        updates.set(key, document.get(key));
-                    }
-                });
-                updates.set("updateTime", date);
                 try {
-                    mongoTemplate.updateFirst(query,updates, CmdbConstant.MODEL_COLLECTION_NAME);
+                    Query query = Query.query(Criteria.where("_id").is(model.get_id()));
+                    Update updates = new Update();
+                    document.keySet().forEach(key -> {
+                        if (!key.equals("_id") && !key.contains("Time")) {
+                            updates.set(key, document.get(key));
+                        }
+                    });
+                    updates.set("updateTime", date);
+                    Document updateDoc = mongoTemplate.findAndModify(query, updates, Document.class, CmdbConstant.MODEL_COLLECTION_NAME);
+                    if (updateDoc == null) {
+                        throw new Exception("记录不存在");
+                    }
                 } catch (Exception e) {
                     logger.error("修改失败: " + e.getMessage() + "(" + document + ")");
-                    return CommonResult.failed("修改失败");
+                    return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
                 }
             }break;
             default: break;
         }
         String msg = flag == 0 ? "新增成功(" + document + ")" : "修改成功(" + document + ")";
         logger.info(msg);
-        return CommonResult.success("操作成功");
+        return CommonResult.success(ResultCodeEnum.SUCCESS.getMessage());
     }
 
     @Override
