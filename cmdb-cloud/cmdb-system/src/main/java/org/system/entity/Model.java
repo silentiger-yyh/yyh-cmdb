@@ -1,6 +1,5 @@
 package org.system.entity;
 
-import com.alibaba.fastjson.JSON;
 import io.swagger.annotations.ApiModel;
 import lombok.Builder;
 import lombok.Data;
@@ -10,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
@@ -39,7 +39,7 @@ public class Model implements Serializable {
     private Integer status;
 
     private ObjectId parent;
-    @NotBlank(message = "分组不能为空")
+    @NotNull(message = "分组不能为空")
     private ObjectId group;
     private List<Model> remodels;
 

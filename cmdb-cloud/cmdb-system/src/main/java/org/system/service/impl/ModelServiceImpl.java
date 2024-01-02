@@ -1,13 +1,12 @@
 package org.system.service.impl;
 
 import com.alibaba.fastjson.JSON;
-import com.mongodb.client.result.UpdateResult;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.silentiger.api.CommonResult;
 import org.silentiger.constant.CmdbConstant;
-import org.silentiger.enumeration.ResultCodeEnum;
+import org.silentiger.util.LoggerUtil;
 import org.silentiger.util.Pinyin4jUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,10 +35,7 @@ public class ModelServiceImpl implements IModelService {
 
     @Autowired
     private MongoTemplate mongoTemplate;
-//    @Autowired
-//    private Logger logger;
 
-//    private static final Logger logger = LoggerFactory.getLogger(ModelServiceImpl.class);
     private static final Logger logger = LoggerFactory.getLogger(CmdbConstant.LOGGER_NAME);
 
     @Override
@@ -54,17 +50,21 @@ public class ModelServiceImpl implements IModelService {
         if (flag) { // 新增
             document.append("createTime", date)
                     .append("updateTime", date)
+                    .append("group", model.getGroup())
                     .append("status", 0);
+            if (model.getParent() != null) {
+                document.append("parent", model.getParent());
+            }
             try {
                 Query query = Query.query(Criteria.where("code").is(model.getCode()).and("status").is(0));
                 List<Document> models = mongoTemplate.find(query, Document.class, CmdbConstant.MODEL_COLLECTION_NAME);
                 if (!models.isEmpty()) {
-                    throw new Exception("新增失败: 编码重复 (" + document.get("code") + ")");
+                    throw new Exception("编码重复 (" + document.get("code") + ")");
                 }
                 mongoTemplate.getCollection(CmdbConstant.MODEL_COLLECTION_NAME).insertOne(document);
             } catch (Exception e) {
-                logger.error(e.getMessage());
-                return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+                logger.error(LoggerUtil.getFullExpMsg(e));
+                return CommonResult.failed(e.getMessage());
             }
         } else  {  // 修改
             try {
@@ -75,31 +75,40 @@ public class ModelServiceImpl implements IModelService {
                         updates.set(key, document.get(key));
                     }
                 });
+                if (model.getParent() != null) {
+                    updates.set("parent", model.getParent());
+                }
+                updates.set("group", model.getGroup());
                 updates.set("updateTime", date);
                 // 查询记录并修改，返回旧纪录
                 Document updateDoc = mongoTemplate.findAndModify(query, updates, Document.class, CmdbConstant.MODEL_COLLECTION_NAME);
                 if (updateDoc == null) {
-                    throw new Exception("修改失败: 记录不存在 (" + document + ")");
+                    throw new RuntimeException("记录不存在 (" + document + ")");
                 }
             } catch (Exception e) {
-                logger.error(e.getMessage());
-                return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+                logger.error(LoggerUtil.getFullExpMsg(e));
+                return CommonResult.failed(e.getMessage());
             }
         }
-        logger.info(flag ? "新增成功(" + document + ")" : "修改成功(" + document + ")");
-        return CommonResult.success(ResultCodeEnum.SUCCESS.getMessage());
+        String msg = flag ? "新增成功(" + document + ")" : "修改成功(" + document + ")";
+        logger.info(msg);
+        return CommonResult.success(msg);
     }
 
     @Override
-    public CommonResult<Object> getModelInfoById(String id) {
-        ObjectId objId = new ObjectId(id);
-        Query query = Query.query(Criteria.where("_id").is(objId));
-        List<Document> documents = mongoTemplate.find(query, Document.class, CmdbConstant.MODEL_COLLECTION_NAME);
-        Document document = null;
-        if (!documents.isEmpty()) {
-            document = documents.get(0);
+    public CommonResult<Object> getModelInfoById(String id){
+        try {
+            ObjectId objId = new ObjectId(id);
+            Query query = Query.query(Criteria.where("_id").is(objId));
+            Model model = mongoTemplate.findOne(query, Model.class);
+            if (model == null) {
+                throw new RuntimeException("记录不存在");
+            }
+            return CommonResult.success(model);
+        } catch (Exception e) {
+            logger.error(LoggerUtil.getFullExpMsg(e));
+            throw new RuntimeException(e);
         }
-        return CommonResult.success(document);
     }
 
 }

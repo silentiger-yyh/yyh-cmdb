@@ -39,7 +39,7 @@ public class CommonResult<T> {
      * @param  message 提示信息
      */
     public static <T> CommonResult<T> success(T data, String message) {
-        return new CommonResult<>(ResultCodeEnum.SUCCESS.getCode(), message, data);
+        return new CommonResult<>(ResultCodeEnum.SUCCESS.getCode(), ResultCodeEnum.SUCCESS.getMessage() + ": " + message, data);
     }
 
     /**
@@ -49,7 +49,7 @@ public class CommonResult<T> {
      * @param <T> 
      */
     public static <T> CommonResult<T> failed(String message) {
-        return new CommonResult<>(ResultCodeEnum.FAILED.getCode(), message, null);
+        return new CommonResult<>(ResultCodeEnum.FAILED.getCode(), ResultCodeEnum.FAILED.getMessage() + ":" + message, null);
     }
 
     /**
@@ -57,7 +57,7 @@ public class CommonResult<T> {
      * @param message 提示信息
      */
     public static <T> CommonResult<T> validateFailed(String message) {
-        return new CommonResult<T>(ResultCodeEnum.VALIDATE_FAILED.getCode(), message, null);
+        return new CommonResult<T>(ResultCodeEnum.VALIDATE_FAILED.getCode(), ResultCodeEnum.VALIDATE_FAILED.getMessage() + ":" + message, null);
     }
 
     /**

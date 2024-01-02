@@ -9,6 +9,7 @@ import org.bson.types.ObjectId;
 import org.silentiger.api.CommonResult;
 import org.silentiger.constant.CmdbConstant;
 import org.silentiger.enumeration.ResultCodeEnum;
+import org.silentiger.util.LoggerUtil;
 import org.silentiger.util.Pinyin4jUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,8 +66,8 @@ public class ModelGroupServiceImpl implements IModelGroupService {
                 mongoTemplate.getCollection(CmdbConstant.MODEL_GROUP_COLLECTION_NAME).insertOne(document);
                 logger.info("模型分组添加成功: " + document);
             } catch (Exception e) {
-                logger.error("模型分组新增失败, " + e.getMessage());
-                return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+                logger.error(LoggerUtil.getFullExpMsg(e));
+                return CommonResult.failed("模型分组新增失败");
             }
         } else {  // 修改
             try {
@@ -77,6 +78,9 @@ public class ModelGroupServiceImpl implements IModelGroupService {
                         updates.set(key, document.get(key));
                     }
                 });
+                if (modelGroup.getParent() != null) {
+                    updates.set("parent", modelGroup.getParent());
+                }
                 updates.set("updateTime", date);
                 Document orgDoc = mongoTemplate.findAndModify(updateQuery, updates, Document.class, CmdbConstant.MODEL_GROUP_COLLECTION_NAME);
                 if (orgDoc == null) {
@@ -84,8 +88,8 @@ public class ModelGroupServiceImpl implements IModelGroupService {
                 }
                 logger.info("模型分组修改成功: " + document);
             } catch (Exception e) {
-                logger.error(e.getMessage());
-                return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+                logger.error(LoggerUtil.getFullExpMsg(e));
+                return CommonResult.failed("模型分组修改失败");
             }
         }
         return CommonResult.success(ResultCodeEnum.SUCCESS.getMessage());
@@ -98,8 +102,8 @@ public class ModelGroupServiceImpl implements IModelGroupService {
             List<ModelGroup> modelGroups = mongoTemplate.find(query, ModelGroup.class);
             return CommonResult.success(modelGroups);
         } catch (Exception e) {
-            logger.error("一级分组列表查询失败，" + e.getMessage());
-            return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+            logger.error(LoggerUtil.getFullExpMsg(e));
+            return CommonResult.failed("一级分组列表查询失败");
         }
     }
 
@@ -110,8 +114,8 @@ public class ModelGroupServiceImpl implements IModelGroupService {
             List<ModelGroup> modelGroups = mongoTemplate.find(query, ModelGroup.class);
             return CommonResult.success(modelGroups);
         } catch (Exception e) {
-            logger.error("二级分组列表查询失败，" + e.getMessage());
-            return CommonResult.failed(ResultCodeEnum.FAILED.getMessage());
+            logger.error(LoggerUtil.getFullExpMsg(e));
+            return CommonResult.failed("二级分组列表查询失败");
         }
     }
 }

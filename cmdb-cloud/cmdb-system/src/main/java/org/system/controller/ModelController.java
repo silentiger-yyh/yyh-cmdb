@@ -3,16 +3,14 @@ package org.system.controller;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
-import org.bson.Document;
 import org.silentiger.api.CommonResult;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.annotation.Id;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.system.entity.Model;
 import org.system.service.IModelService;
 
 import javax.validation.Valid;
-import java.util.HashMap;
 
 /**
  * ModelController类
@@ -23,8 +21,8 @@ import java.util.HashMap;
  */
 
 @RestController
-@Api("模型管理接口")
 @RequestMapping("model")
+@Api("模型管理接口")
 public class ModelController {
 
     @Autowired
